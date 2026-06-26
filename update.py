@@ -3,7 +3,7 @@ import re
 import hashlib
 from datetime import datetime
 
-RSS_URL = "https://rsshub.app/twitter/user/TennisEloWorld"
+RSS_URL = "https://rsshub.app/x/user/TennisEloWorld"
 
 FULL_FEED = "tennis-backstage-talks.xml"
 TOP_FEED = "tennis-backstage-talks-TOP.xml"
