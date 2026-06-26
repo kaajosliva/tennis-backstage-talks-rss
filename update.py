@@ -3,7 +3,7 @@ import re
 from datetime import datetime
 
 # Twitter API cez Nitter (bez tokenu)
-NITTER_URL = "https://nitter.cz/TennisEloWorld/rss"
+NITTER_URL = "https://nitter.esmailelbob.xyz/TennisEloWorld/rss"
 
 # Súbory, ktoré budeme generovať
 FULL_FEED = "tennis-backstage-talks.xml"
