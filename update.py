@@ -1,10 +1,8 @@
-import requests
+import subprocess
+import json
 import re
 import hashlib
 from datetime import datetime
-
-# Nový funkčný RSSHub endpoint
-RSS_URL = "https://rsshub.app/x/user/TennisEloWorld"
 
 FULL_FEED = "tennis-backstage-talks.xml"
 TOP_FEED = "tennis-backstage-talks-TOP.xml"
@@ -47,49 +45,37 @@ def build_rss(items, title, description):
 """
 
 def main():
-    print("Sťahujem RSS z RSSHub...")
+    print("Sťahujem tweety cez snscrape...")
 
-    # Realistické hlavičky – obchádzajú 403
-    headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
-        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-        "Accept-Language": "en-US,en;q=0.5",
-        "Referer": "https://www.google.com/"
-    }
+    # Spustíme snscrape a získame JSONL výstup
+    result = subprocess.run(
+        ["snscrape", "--jsonl", "twitter-user", "TennisEloWorld"],
+        capture_output=True,
+        text=True
+    )
 
-    try:
-        r = requests.get(RSS_URL, headers=headers, timeout=10)
-    except Exception as e:
-        print("Chyba pri sťahovaní RSS:", e)
+    if result.returncode != 0:
+        print("Chyba pri spúšťaní snscrape")
         return
 
-    if r.status_code != 200:
-        print("Chyba pri sťahovaní RSS:", r.status_code)
-        return
-
-    xml = r.text
-    entries = re.findall(r"<item>(.*?)</item>", xml, re.DOTALL)
+    lines = result.stdout.strip().split("\n")
 
     full_items = []
     top_items = []
 
-    for entry in entries:
-        desc = re.search(r"<description>(.*?)</description>", entry, re.DOTALL)
-        link = re.search(r"<link>(.*?)</link>", entry)
-        date = re.search(r"<pubDate>(.*?)</pubDate>", entry)
+    for line in lines:
+        tweet = json.loads(line)
 
-        if not desc:
-            continue
-
-        raw_text = clean_text(desc.group(1))
+        raw_text = clean_text(tweet["content"])
         matches = extract_matches(raw_text)
 
-        tweet_link = link.group(1) if link else "https://twitter.com/TennisEloWorld"
-        pub_date = date.group(1) if date else datetime.utcnow().strftime("%a, %d %b %Y %H:%M:%S GMT")
+        tweet_link = f"https://twitter.com/TennisEloWorld/status/{tweet['id']}"
+        pub_date = datetime.fromisoformat(tweet["date"].replace("Z", "+00:00")).strftime(
+            "%a, %d %b %Y %H:%M:%S GMT"
+        )
 
         guid = make_guid(raw_text + pub_date)
 
-        # FULL FEED
         full_items.append({
             "title": raw_text[:40] or "Tweet",
             "content": raw_text,
@@ -98,7 +84,6 @@ def main():
             "link": tweet_link
         })
 
-        # TOP FEED (≥70 %)
         if matches:
             top_matches = []
             for m in matches:
