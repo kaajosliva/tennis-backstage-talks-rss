@@ -3,6 +3,7 @@ import re
 import hashlib
 from datetime import datetime
 
+# Nový funkčný RSSHub endpoint
 RSS_URL = "https://rsshub.app/x/user/TennisEloWorld"
 
 FULL_FEED = "tennis-backstage-talks.xml"
@@ -47,7 +48,20 @@ def build_rss(items, title, description):
 
 def main():
     print("Sťahujem RSS z RSSHub...")
-    r = requests.get(RSS_URL, headers={"User-Agent": "Mozilla/5.0"})
+
+    # Realistické hlavičky – obchádzajú 403
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        "Accept-Language": "en-US,en;q=0.5",
+        "Referer": "https://www.google.com/"
+    }
+
+    try:
+        r = requests.get(RSS_URL, headers=headers, timeout=10)
+    except Exception as e:
+        print("Chyba pri sťahovaní RSS:", e)
+        return
 
     if r.status_code != 200:
         print("Chyba pri sťahovaní RSS:", r.status_code)
@@ -75,7 +89,7 @@ def main():
 
         guid = make_guid(raw_text + pub_date)
 
-        # FULL FEED = všetko
+        # FULL FEED
         full_items.append({
             "title": raw_text[:40] or "Tweet",
             "content": raw_text,
@@ -84,7 +98,7 @@ def main():
             "link": tweet_link
         })
 
-        # TOP FEED = len ≥70 %
+        # TOP FEED (≥70 %)
         if matches:
             top_matches = []
             for m in matches:
