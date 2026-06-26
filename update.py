@@ -2,10 +2,9 @@ import requests
 import re
 from datetime import datetime
 
-# Stabilný RSS zdroj cez RSSHub (funguje aj z GitHub Actions)
+# Stabilný RSS zdroj cez RSSHub
 RSS_URL = "https://rsshub.app/twitter/user/TennisEloWorld"
 
-# Výstupné súbory
 FULL_FEED = "tennis-backstage-talks.xml"
 TOP_FEED = "tennis-backstage-talks-TOP.xml"
 
@@ -16,7 +15,6 @@ def clean_text(text):
     return text.strip()
 
 def extract_matches(text):
-    # Formát: "Meno 32% – 68% Meno"
     pattern = r"([A-Za-z .'-]+)\s+(\d{1,3})%\s+[–-]\s+(\d{1,3})%\s+([A-Za-z .'-]+)"
     return re.findall(pattern, text)
 
@@ -33,12 +31,12 @@ def build_rss(items, title, description):
 
     return f"""<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0">
-  <channel>
-    <title>{title}</title>
-    <link>https://twitter.com/TennisEloWorld</link>
-    <description>{description}</description>
-    {rss_items}
-  </channel>
+<channel>
+<title>{title}</title>
+<link>https://twitter.com/TennisEloWorld</link>
+<description>{description}</description>
+{rss_items}
+</channel>
 </rss>
 """
 
@@ -52,7 +50,6 @@ def main():
 
     xml = r.text
 
-    # Extrakcia <item> blokov
     entries = re.findall(r"<item>(.*?)</item>", xml, re.DOTALL)
 
     full_items = []
@@ -68,38 +65,36 @@ def main():
         raw_text = clean_text(desc.group(1))
         matches = extract_matches(raw_text)
 
-        if not matches:
-            continue
-
-        # FULL FEED
+        # FULL FEED = všetky tweety
         full_items.append({
             "title": "Tennis Backstage Talks",
             "content": raw_text,
             "date": date.group(1) if date else datetime.utcnow().strftime("%a, %d %b %Y %H:%M:%S GMT")
         })
 
-        # TOP FEED (≥ 70 %)
-        top_matches = []
-        for m in matches:
-            p1 = int(m[1])
-            p2 = int(m[3])
-            if p1 >= 70 or p2 >= 70:
-                top_matches.append(f"{m[0]} {m[1]}% – {m[3]}% {m[4]}")
+        # TOP FEED = len ≥70 %
+        if matches:
+            top_matches = []
+            for m in matches:
+                p1 = int(m[1])
+                p2 = int(m[3])
+                if p1 >= 70 or p2 >= 70:
+                    top_matches.append(f"{m[0]} {m[1]}% – {m[3]}% {m[4]}")
 
-        if top_matches:
-            top_items.append({
-                "title": "TOP Picks",
-                "content": "\n".join(top_matches),
-                "date": date.group(1) if date else datetime.utcnow().strftime("%a, %d %b %Y %H:%M:%S GMT")
-            })
+            if top_matches:
+                top_items.append({
+                    "title": "TOP Picks",
+                    "content": "\n".join(top_matches),
+                    "date": date.group(1) if date else datetime.utcnow().strftime("%a, %d %b %Y %H:%M:%S GMT")
+                })
 
     print("Generujem FULL feed...")
     with open(FULL_FEED, "w", encoding="utf-8") as f:
-        f.write(build_rss(full_items, "Tennis Backstage Talks – Full Feed", "All matches + tournaments"))
+        f.write(build_rss(full_items, "Tennis Backstage Talks – Full Feed", "All tweets from TennisEloWorld"))
 
     print("Generujem TOP feed...")
     with open(TOP_FEED, "w", encoding="utf-8") as f:
-        f.write(build_rss(top_items, "Tennis Backstage Talks – TOP Picks", "Only matches with 70%+"))
+        f.write(build_rss(top_items, "Tennis Backstage Talks – TOP Picks", "Only matches with 70%+ predictions"))
 
     print("Hotovo!")
 
