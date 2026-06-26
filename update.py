@@ -2,8 +2,8 @@ import requests
 import re
 from datetime import datetime
 
-# Funkčná Nitter inštancia (testovaná aj z GitHub Actions)
-NITTER_URL = "https://nitter.lucabased.xyz/TennisEloWorld/rss"
+# Stabilný RSS zdroj cez RSSHub (funguje aj z GitHub Actions)
+RSS_URL = "https://rsshub.app/twitter/user/TennisEloWorld"
 
 # Výstupné súbory
 FULL_FEED = "tennis-backstage-talks.xml"
@@ -43,11 +43,11 @@ def build_rss(items, title, description):
 """
 
 def main():
-    print("Sťahujem tweety...")
-    r = requests.get(NITTER_URL, headers={"User-Agent": "Mozilla/5.0"})
+    print("Sťahujem RSS z RSSHub...")
+    r = requests.get(RSS_URL, headers={"User-Agent": "Mozilla/5.0"})
 
     if r.status_code != 200:
-        print("Chyba pri sťahovaní tweetov:", r.status_code)
+        print("Chyba pri sťahovaní RSS:", r.status_code)
         return
 
     xml = r.text
@@ -59,7 +59,6 @@ def main():
     top_items = []
 
     for entry in entries:
-        title = re.search(r"<title>(.*?)</title>", entry)
         desc = re.search(r"<description>(.*?)</description>", entry, re.DOTALL)
         date = re.search(r"<pubDate>(.*?)</pubDate>", entry)
 
