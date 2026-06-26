@@ -1,21 +1,19 @@
- import requests
+import requests
 import re
 from datetime import datetime
 
-# Twitter API cez Nitter (bez tokenu)
-NITTER_URL = "https://nitter.net/TennisEloWorld/rss"
+# Funkčná Nitter inštancia (testovaná aj z GitHub Actions)
+NITTER_URL = "https://nitter.lucabased.xyz/TennisEloWorld/rss"
 
-# Súbory, ktoré budeme generovať
+# Výstupné súbory
 FULL_FEED = "tennis-backstage-talks.xml"
 TOP_FEED = "tennis-backstage-talks-TOP.xml"
 
 def clean_text(text):
-    # Odstránenie hashtagov, emotikonov, URL, komentárov
     text = re.sub(r"http\S+", "", text)
     text = re.sub(r"#\S+", "", text)
     text = re.sub(r"[^\x00-\x7F]+", "", text)
-    text = text.strip()
-    return text
+    return text.strip()
 
 def extract_matches(text):
     # Formát: "Meno 32% – 68% Meno"
@@ -47,13 +45,14 @@ def build_rss(items, title, description):
 def main():
     print("Sťahujem tweety...")
     r = requests.get(NITTER_URL, headers={"User-Agent": "Mozilla/5.0"})
+
     if r.status_code != 200:
         print("Chyba pri sťahovaní tweetov:", r.status_code)
         return
 
     xml = r.text
 
-    # Extrakcia položiek z RSS
+    # Extrakcia <item> blokov
     entries = re.findall(r"<item>(.*?)</item>", xml, re.DOTALL)
 
     full_items = []
@@ -95,7 +94,6 @@ def main():
                 "date": date.group(1) if date else datetime.utcnow().strftime("%a, %d %b %Y %H:%M:%S GMT")
             })
 
-    # Uloženie feedov
     print("Generujem FULL feed...")
     with open(FULL_FEED, "w", encoding="utf-8") as f:
         f.write(build_rss(full_items, "Tennis Backstage Talks – Full Feed", "All matches + tournaments"))
