@@ -1,5 +1,4 @@
-import subprocess
-import json
+import snscrape.modules.twitter as sntwitter
 import re
 import hashlib
 from datetime import datetime
@@ -45,38 +44,20 @@ def build_rss(items, title, description):
 """
 
 def main():
-    print("Sťahujem tweety cez snscrape...")
-
-    # Spustenie snscrape cez Python modul – spoľahlivé v GitHub Actions
-    result = subprocess.run(
-        ["python3", "-m", "snscrape", "--jsonl", "twitter-user", "TennisEloWorld"],
-        capture_output=True,
-        text=True
-    )
-
-    if result.returncode != 0:
-        print("Chyba pri spúšťaní snscrape")
-        print(result.stderr)
-        return
-
-    lines = result.stdout.strip().split("\n")
+    print("Sťahujem tweety cez snscrape API...")
 
     full_items = []
     top_items = []
 
-    for line in lines:
-        if not line.strip():
-            continue
+    # Použijeme priamo Python API snscrape
+    scraper = sntwitter.TwitterUserScraper("TennisEloWorld")
 
-        tweet = json.loads(line)
-
-        raw_text = clean_text(tweet["content"])
+    for tweet in scraper.get_items():
+        raw_text = clean_text(tweet.content)
         matches = extract_matches(raw_text)
 
-        tweet_link = f"https://twitter.com/TennisEloWorld/status/{tweet['id']}"
-        pub_date = datetime.fromisoformat(
-            tweet["date"].replace("Z", "+00:00")
-        ).strftime("%a, %d %b %Y %H:%M:%S GMT")
+        tweet_link = f"https://twitter.com/TennisEloWorld/status/{tweet.id}"
+        pub_date = tweet.date.strftime("%a, %d %b %Y %H:%M:%S GMT")
 
         guid = make_guid(raw_text + pub_date)
 
