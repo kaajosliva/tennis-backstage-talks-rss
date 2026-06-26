@@ -47,15 +47,16 @@ def build_rss(items, title, description):
 def main():
     print("Sťahujem tweety cez snscrape...")
 
-    # Spustíme snscrape a získame JSONL výstup
+    # Spustenie snscrape cez Python modul – spoľahlivé v GitHub Actions
     result = subprocess.run(
-        ["snscrape", "--jsonl", "twitter-user", "TennisEloWorld"],
+        ["python3", "-m", "snscrape", "--jsonl", "twitter-user", "TennisEloWorld"],
         capture_output=True,
         text=True
     )
 
     if result.returncode != 0:
         print("Chyba pri spúšťaní snscrape")
+        print(result.stderr)
         return
 
     lines = result.stdout.strip().split("\n")
@@ -64,15 +65,18 @@ def main():
     top_items = []
 
     for line in lines:
+        if not line.strip():
+            continue
+
         tweet = json.loads(line)
 
         raw_text = clean_text(tweet["content"])
         matches = extract_matches(raw_text)
 
         tweet_link = f"https://twitter.com/TennisEloWorld/status/{tweet['id']}"
-        pub_date = datetime.fromisoformat(tweet["date"].replace("Z", "+00:00")).strftime(
-            "%a, %d %b %Y %H:%M:%S GMT"
-        )
+        pub_date = datetime.fromisoformat(
+            tweet["date"].replace("Z", "+00:00")
+        ).strftime("%a, %d %b %Y %H:%M:%S GMT")
 
         guid = make_guid(raw_text + pub_date)
 
@@ -103,11 +107,19 @@ def main():
 
     print("Generujem FULL feed...")
     with open(FULL_FEED, "w", encoding="utf-8") as f:
-        f.write(build_rss(full_items, "Tennis Backstage Talks – Full Feed", "All tweets from TennisEloWorld"))
+        f.write(build_rss(
+            full_items,
+            "Tennis Backstage Talks – Full Feed",
+            "All tweets from TennisEloWorld"
+        ))
 
     print("Generujem TOP feed...")
     with open(TOP_FEED, "w", encoding="utf-8") as f:
-        f.write(build_rss(top_items, "Tennis Backstage Talks – TOP Picks", "Only matches with 70%+ predictions"))
+        f.write(build_rss(
+            top_items,
+            "Tennis Backstage Talks – TOP Picks",
+            "Only matches with 70%+ predictions"
+        ))
 
     print("Hotovo!")
 
