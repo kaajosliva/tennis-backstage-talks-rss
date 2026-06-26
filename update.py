@@ -1,9 +1,9 @@
-import requests
+ import requests
 import re
 from datetime import datetime
 
 # Twitter API cez Nitter (bez tokenu)
-NITTER_URL = "https://nitter.privacydev.net/TennisEloWorld/rss"
+NITTER_URL = "https://nitter.net/TennisEloWorld/rss"
 
 # Súbory, ktoré budeme generovať
 FULL_FEED = "tennis-backstage-talks.xml"
@@ -46,9 +46,9 @@ def build_rss(items, title, description):
 
 def main():
     print("Sťahujem tweety...")
-    r = requests.get(NITTER_URL)
+    r = requests.get(NITTER_URL, headers={"User-Agent": "Mozilla/5.0"})
     if r.status_code != 200:
-        print("Chyba pri sťahovaní tweetov")
+        print("Chyba pri sťahovaní tweetov:", r.status_code)
         return
 
     xml = r.text
