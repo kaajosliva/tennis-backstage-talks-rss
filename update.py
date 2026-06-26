@@ -1,8 +1,8 @@
 import requests
 import re
+import hashlib
 from datetime import datetime
 
-# Stabilný RSS zdroj cez RSSHub
 RSS_URL = "https://rsshub.app/twitter/user/TennisEloWorld"
 
 FULL_FEED = "tennis-backstage-talks.xml"
@@ -18,12 +18,17 @@ def extract_matches(text):
     pattern = r"([A-Za-z .'-]+)\s+(\d{1,3})%\s+[–-]\s+(\d{1,3})%\s+([A-Za-z .'-]+)"
     return re.findall(pattern, text)
 
+def make_guid(text):
+    return hashlib.md5(text.encode("utf-8")).hexdigest()
+
 def build_rss(items, title, description):
     rss_items = ""
     for item in items:
         rss_items += f"""
         <item>
             <title>{item['title']}</title>
+            <link>{item['link']}</link>
+            <guid isPermaLink="false">{item['guid']}</guid>
             <description><![CDATA[{item['content']}]]></description>
             <pubDate>{item['date']}</pubDate>
         </item>
@@ -49,7 +54,6 @@ def main():
         return
 
     xml = r.text
-
     entries = re.findall(r"<item>(.*?)</item>", xml, re.DOTALL)
 
     full_items = []
@@ -57,6 +61,7 @@ def main():
 
     for entry in entries:
         desc = re.search(r"<description>(.*?)</description>", entry, re.DOTALL)
+        link = re.search(r"<link>(.*?)</link>", entry)
         date = re.search(r"<pubDate>(.*?)</pubDate>", entry)
 
         if not desc:
@@ -65,11 +70,18 @@ def main():
         raw_text = clean_text(desc.group(1))
         matches = extract_matches(raw_text)
 
-        # FULL FEED = všetky tweety
+        tweet_link = link.group(1) if link else "https://twitter.com/TennisEloWorld"
+        pub_date = date.group(1) if date else datetime.utcnow().strftime("%a, %d %b %Y %H:%M:%S GMT")
+
+        guid = make_guid(raw_text + pub_date)
+
+        # FULL FEED = všetko
         full_items.append({
-            "title": "Tennis Backstage Talks",
+            "title": raw_text[:40] or "Tweet",
             "content": raw_text,
-            "date": date.group(1) if date else datetime.utcnow().strftime("%a, %d %b %Y %H:%M:%S GMT")
+            "date": pub_date,
+            "guid": guid,
+            "link": tweet_link
         })
 
         # TOP FEED = len ≥70 %
@@ -83,9 +95,11 @@ def main():
 
             if top_matches:
                 top_items.append({
-                    "title": "TOP Picks",
+                    "title": top_matches[0][:40],
                     "content": "\n".join(top_matches),
-                    "date": date.group(1) if date else datetime.utcnow().strftime("%a, %d %b %Y %H:%M:%S GMT")
+                    "date": pub_date,
+                    "guid": guid,
+                    "link": tweet_link
                 })
 
     print("Generujem FULL feed...")
