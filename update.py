@@ -49,7 +49,6 @@ def main():
     full_items = []
     top_items = []
 
-    # Použijeme priamo Python API snscrape
     scraper = sntwitter.TwitterUserScraper("TennisEloWorld")
 
     for tweet in scraper.get_items():
